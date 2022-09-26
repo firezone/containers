@@ -67,6 +67,26 @@ RUN find /usr/local -name src | xargs -r find | xargs rmdir -vp || true
 RUN scanelf --nobanner -E ET_EXEC -BF '%F' --recursive /usr/local | xargs -r strip --strip-all
 RUN scanelf --nobanner -E ET_DYN -BF '%F' --recursive /usr/local | xargs -r strip --strip-unneeded
 
+RUN apk add --update --no-cache \
+  libstdc++ \
+  ncurses \
+  $(if [ "${ERLANG:0:1}" = "1" ]; then echo "libressl"; else echo "openssl"; fi) \
+  unixodbc \
+  lksctp-tools \
+  unzip
+
+RUN apk add --no-cache --update \
+  wget \
+  unzip \
+  make
+
+ARG ELIXIR
+ARG ERLANG_MAJOR
+
+RUN wget -q -O elixir.zip "https://repo.hex.pm/builds/elixir/v${ELIXIR}-otp-${ERLANG_MAJOR}.zip" && unzip -d /ELIXIR elixir.zip
+WORKDIR /ELIXIR
+RUN make -o compile DESTDIR=/ELIXIR_LOCAL install
+
 FROM alpine:${OS_VERSION} AS final
 
 ARG ERLANG
@@ -79,3 +99,4 @@ RUN apk add --update --no-cache \
   lksctp-tools
 
 COPY --from=build /usr/local /usr/local
+COPY --from=build /ELIXIR_LOCAL/usr/local /usr/local

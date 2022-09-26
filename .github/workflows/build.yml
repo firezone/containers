@@ -13,8 +13,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: linux/386
-            cf_protection: "-fcf-protection=full"
           - platform: linux/amd64
             cf_protection: "-fcf-protection=full"
           - platform: linux/amd64/v2
@@ -25,15 +23,9 @@ jobs:
             cf_protection:
           - platform: linux/s390x
             cf_protection:
-          - platform: linux/mips64le
-            cf_protection:
-          - platform: linux/mips64
-            cf_protection:
           - platform: linux/arm/v7
             cf_protection:
           - platform: linux/arm/v6
-            cf_protection:
-          - platform: linux/riscv64
             cf_protection:
           - platform: linux/ppc64le
             cf_protection:
@@ -59,6 +51,7 @@ jobs:
           push: true
           file: Dockerfile
           build-args: |
+            ERLANG_MAJOR=25
             ERLANG=25.1
             OS_VERSION=3.16.2
             CF_PROTECTION=${{ matrix.cf_protection }}
