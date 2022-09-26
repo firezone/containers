@@ -1,0 +1,67 @@
+name: Build and Publish Docker images
+
+on: workflow_dispatch
+
+env:
+  ERLANG: "25.1"
+  ALPINE: "3.16.2"
+  ELIXIR: "1.14.0"
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux/386
+            cf_protection: "-fcf-protection=full"
+          - platform: linux/amd64
+            cf_protection: "-fcf-protection=full"
+          - platform: linux/amd64/v2
+            cf_protection: "-fcf-protection=full"
+          - platform: linux/amd64/v3
+            cf_protection: "-fcf-protection=full"
+          - platform: linux/arm64
+            cf_protection:
+          - platform: linux/s390x
+            cf_protection:
+          - platform: linux/mips64le
+            cf_protection:
+          - platform: linux/mips64
+            cf_protection:
+          - platform: linux/arm/v7
+            cf_protection:
+          - platform: linux/arm/v6
+            cf_protection:
+          - platform: linux/riscv64
+            cf_protection:
+          - platform: linux/ppc64le
+            cf_protection:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          config-inline: |
+            [worker.oci]
+              platforms = ["${{ matrix.platform }}"]
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          push: true
+          file: Dockerfile
+          build-args: |
+            ERLANG=25.1
+            OS_VERSION=3.16.2
+            CF_PROTECTION=${{ matrix.cf_protection }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/elixir:${{ env.ELIXIR }}-otp-${{ env.ERLANG }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
