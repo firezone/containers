@@ -7,8 +7,9 @@ on:
       - main
 
 env:
+  ERLANG_MAJOR: "25"
   ERLANG: "25.1"
-  ALPINE: "3.16.2"
+  OS_VERSION: "3.16.2"
   ELIXIR: "1.14.0"
 
 jobs:
@@ -55,10 +56,11 @@ jobs:
           push: true
           file: Dockerfile
           build-args: |
-            ERLANG_MAJOR=25
-            ERLANG=25.1
+            ELIXIR=${{ env.ELIXIR }}
+            ERLANG_MAJOR=${{ env.ERLANG_MAJOR }}
+            OS_VERSION=${{ env.OS_VERSION }}
+            ERLANG=${{ env.ERLANG }}
             ERLANG_CONFIGURE_OPTS=${{ matrix.erlang_configure_opts }}
-            OS_VERSION=3.16.2
             CF_PROTECTION=${{ matrix.cf_protection }}
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/elixir:${{ env.ELIXIR }}-otp-${{ env.ERLANG }}
           cache-from: type=gha
