@@ -20,15 +20,15 @@ jobs:
           - platform: linux/amd64/v3
             cf_protection: "-fcf-protection=full"
           - platform: linux/arm64
-            cf_protection:
+            erlang_configure_opts: --disable-jit
           - platform: linux/s390x
-            cf_protection:
+            erlang_configure_opts: --disable-jit
           - platform: linux/arm/v7
-            cf_protection:
+            erlang_configure_opts: --disable-jit
           - platform: linux/arm/v6
-            cf_protection:
+            erlang_configure_opts: --disable-jit
           - platform: linux/ppc64le
-            cf_protection:
+            erlang_configure_opts: --disable-jit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -53,6 +53,7 @@ jobs:
           build-args: |
             ERLANG_MAJOR=25
             ERLANG=25.1
+            ERLANG_CONFIGURE_OPTS=${{ matrix.erlang_configure_opts }}
             OS_VERSION=3.16.2
             CF_PROTECTION=${{ matrix.cf_protection }}
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/elixir:${{ env.ELIXIR }}-otp-${{ env.ERLANG }}

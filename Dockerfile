@@ -29,6 +29,7 @@ WORKDIR /OTP/subdir
 RUN ./otp_build autoconf
 
 ARG PIE_CFLAGS
+ARG ERLANG_CONFIGURE_OPTS
 ARG CF_PROTECTION
 ARG CFLAGS="-g -O2 -fstack-clash-protection ${CF_PROTECTION} ${PIE_CFLAGS}"
 
@@ -56,7 +57,8 @@ RUN ./configure \
   --with-ssl \
   --enable-threads \
   --enable-dirty-schedulers \
-  --disable-hipe
+  --disable-hipe \
+  ${ERLANG_CONFIGURE_OPTS}
 RUN make -j$(getconf _NPROCESSORS_ONLN)
 RUN make install
 RUN if [ "${ERLANG:0:2}" -ge "23" ]; then make docs DOC_TARGETS=chunks; else true; fi
