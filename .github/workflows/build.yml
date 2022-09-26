@@ -1,6 +1,10 @@
 name: Build and Publish Docker images
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 env:
   ERLANG: "25.1"
