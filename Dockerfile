@@ -57,11 +57,9 @@ RUN ./configure \
   --disable-hipe \
   $(if [[ "${TARGETARCH}" != *"amd64"* ]]; then echo "--disable-jit"; fi)
 
-RUN $(if [[ "${TARGETARCH}" == *"amd64"* ]]; then \
-      export CFLAGS="-g -O2 -fstack-clash-protection -fcf-protection=full"; \
-    else \
-      export CFLAGS="-g -O2 -fstack-clash-protection"; \
-    fi && make -j$(getconf _NPROCESSORS_ONLN)
+RUN $(if [[ "${TARGETARCH}" == *"amd64"* ]]; then export CFLAGS="-g -O2 -fstack-clash-protection -fcf-protection=full"; \
+    else export CFLAGS="-g -O2 -fstack-clash-protection"; fi \
+    && make -j$(getconf _NPROCESSORS_ONLN)
 RUN make install
 RUN if [ "${ERLANG:0:2}" -ge "23" ]; then make docs DOC_TARGETS=chunks; else true; fi
 RUN if [ "${ERLANG:0:2}" -ge "23" ]; then make install-docs DOC_TARGETS=chunks; else true; fi
