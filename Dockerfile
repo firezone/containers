@@ -31,6 +31,7 @@ RUN ./otp_build autoconf
 ARG CF_PROTECTION
 ARG CFLAGS=""
 
+ENV TARGETARCH=$TARGETARCH
 RUN echo $TARGETARCH
 RUN ./configure \
   --build="$(dpkg-architecture --query DEB_HOST_GNU_TYPE)" \
