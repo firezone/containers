@@ -55,7 +55,7 @@ RUN ./configure \
   --enable-threads \
   --enable-dirty-schedulers \
   --disable-hipe \
-  $(if [[ "${TARGETARCH}" == *"amd64"* ]]; then echo "--disable-jit\n"; else echo "\n"; fi)
+  $(if [[ "${TARGETARCH}" != *"amd64"* ]]; then echo "--disable-jit"; fi)
 
 ARG AMD64_CFLAGS="-g -O2 -fstack-clash-protection -fcf-protection=full"
 ARG OTHER_CFLAGS="-g -O2 -fstack-clash-protection"
