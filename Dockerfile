@@ -28,10 +28,8 @@ RUN wget -nv "https://github.com/erlang/otp/archive/OTP-${ERLANG}.tar.gz" && tar
 WORKDIR /OTP/subdir
 RUN ./otp_build autoconf
 
-ARG PIE_CFLAGS
-ARG ERLANG_CONFIGURE_OPTS
 ARG CF_PROTECTION
-ARG CFLAGS="-g -O2 -fstack-clash-protection ${CF_PROTECTION} ${PIE_CFLAGS}"
+ARG CFLAGS=""
 
 RUN ./configure \
   --build="$(dpkg-architecture --query DEB_HOST_GNU_TYPE)" \
@@ -58,8 +56,11 @@ RUN ./configure \
   --enable-threads \
   --enable-dirty-schedulers \
   --disable-hipe \
-  ${ERLANG_CONFIGURE_OPTS}
-RUN make -j$(getconf _NPROCESSORS_ONLN)
+  $(if [ "${TARGETARCH}" != *"amd64" ]; then echo "--disable-jit"; fi)
+
+ARG AMD64_CFLAGS="-g -O2 -fstack-clash-protection -fcf-protection=full"
+ARG OTHER_CFLAGS="-g -O2 -fstack-clash-protection"
+RUN $(if [ "${TARGETARCH}" == *"amd64"* ]; then echo "CFLAGS=${AMD64_CFLAGS}"; else echo "CFLAGS=${OTHER_CFLAGS}"; fi) make -j$(getconf _NPROCESSORS_ONLN)
 RUN make install
 RUN if [ "${ERLANG:0:2}" -ge "23" ]; then make docs DOC_TARGETS=chunks; else true; fi
 RUN if [ "${ERLANG:0:2}" -ge "23" ]; then make install-docs DOC_TARGETS=chunks; else true; fi
@@ -75,9 +76,6 @@ RUN apk add --update --no-cache \
   $(if [ "${ERLANG:0:1}" = "1" ]; then echo "libressl"; else echo "openssl"; fi) \
   unixodbc \
   lksctp-tools \
-  unzip
-
-RUN apk add --no-cache --update \
   wget \
   unzip \
   make
