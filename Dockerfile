@@ -61,8 +61,12 @@ RUN $(if [[ "${TARGETARCH}" == *"amd64"* ]]; then export CFLAGS="-g -O2 -fstack-
     else export CFLAGS="-g -O2 -fstack-clash-protection"; fi) \
     && make -j$(getconf _NPROCESSORS_ONLN)
 RUN make install
-RUN if [ "${ERLANG:0:2}" -ge "23" ]; then make docs DOC_TARGETS=chunks; else true; fi
-RUN if [ "${ERLANG:0:2}" -ge "23" ]; then make install-docs DOC_TARGETS=chunks; else true; fi
+
+# No need to make docs
+# RUN if [ "${ERLANG:0:2}" -ge "23" ]; then make docs DOC_TARGETS=chunks; else true; fi
+# RUN if [ "${ERLANG:0:2}" -ge "23" ]; then make install-docs DOC_TARGETS=chunks; else true; fi
+
+# Remove unneeded artifacts
 RUN find /usr/local -regex '/usr/local/lib/erlang/\(lib/\|erts-\).*/\(man\|obj\|c_src\|emacs\|info\|examples\)' | xargs rm -rf
 RUN find /usr/local -name src | xargs -r find | grep -v '\.hrl$' | xargs rm -v || true
 RUN find /usr/local -name src | xargs -r find | xargs rmdir -vp || true
