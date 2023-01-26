@@ -8,9 +8,9 @@ on:
 
 env:
   ERLANG_MAJOR: "25"
-  ERLANG: "25.1.2"
+  ERLANG: "25.2.1"
   OS_VERSION: "3.16.3"
-  ELIXIR: "1.14.2"
+  ELIXIR: "1.14.3"
 
 jobs:
   build:
