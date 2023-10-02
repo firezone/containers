@@ -54,8 +54,7 @@ RUN ./configure \
   --with-ssl \
   --enable-threads \
   --enable-dirty-schedulers \
-  --disable-hipe \
-  $(if [[ "${TARGETARCH}" != *"amd64"* ]]; then echo "--disable-jit"; fi)
+  --disable-hipe
 
 RUN $(if [[ "${TARGETARCH}" == *"amd64"* ]]; then export CFLAGS="-g -O2 -fstack-clash-protection -fcf-protection=full"; \
     else export CFLAGS="-g -O2 -fstack-clash-protection"; fi) \
