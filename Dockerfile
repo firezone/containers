@@ -21,7 +21,15 @@ RUN apk add --no-cache \
   perl-dev \
   wget \
   tar \
-  binutils
+  binutils \
+  nodejs \
+  npm \
+  build-base \
+  git \
+  python3
+
+# Add pnpm
+RUN npm i -g pnpm
 
 RUN mkdir -p /OTP/subdir
 RUN wget -nv "https://github.com/erlang/otp/archive/OTP-${ERLANG}.tar.gz" && tar -zxf "OTP-${ERLANG}.tar.gz" -C /OTP/subdir --strip-components=1
