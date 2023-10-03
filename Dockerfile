@@ -108,9 +108,9 @@ RUN apk add --update --no-cache \
 # Add pnpm
 RUN npm i -g pnpm
 
+COPY --from=build /usr/local /usr/local
+COPY --from=build /ELIXIR_LOCAL/usr/local /usr/local
+
 # install hex + rebar
 RUN mix local.hex --force && \
     mix local.rebar --force
-
-COPY --from=build /usr/local /usr/local
-COPY --from=build /ELIXIR_LOCAL/usr/local /usr/local
