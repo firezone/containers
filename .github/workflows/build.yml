@@ -14,6 +14,9 @@ env:
 
 jobs:
   build:
+    # This is a dedicated, beefy runner so that we can quickly build cross-platform
+    # images in case we need to quickly push a fix to prod in the case of a CVE
+    # or bug.
     runs-on: ubuntu-22.04-buildx
     steps:
       - uses: actions/checkout@v3
