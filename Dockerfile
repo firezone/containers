@@ -21,15 +21,7 @@ RUN apk add --no-cache \
   perl-dev \
   wget \
   tar \
-  binutils \
-  nodejs \
-  npm \
-  build-base \
-  git \
-  python3
-
-# Add pnpm
-RUN npm i -g pnpm
+  binutils
 
 RUN mkdir -p /OTP/subdir
 RUN wget -nv "https://github.com/erlang/otp/archive/OTP-${ERLANG}.tar.gz" && tar -zxf "OTP-${ERLANG}.tar.gz" -C /OTP/subdir --strip-components=1
@@ -106,7 +98,19 @@ RUN apk add --update --no-cache \
   ncurses \
   $(if [ "${ERLANG:0:1}" = "1" ]; then echo "libressl"; else echo "openssl"; fi) \
   unixodbc \
-  lksctp-tools
+  lksctp-tools \
+  nodejs \
+  npm \
+  build-base \
+  git \
+  python3
+
+# Add pnpm
+RUN npm i -g pnpm
+
+# install hex + rebar
+RUN mix local.hex --force && \
+    mix local.rebar --force
 
 COPY --from=build /usr/local /usr/local
 COPY --from=build /ELIXIR_LOCAL/usr/local /usr/local
