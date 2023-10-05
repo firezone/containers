@@ -18,10 +18,11 @@ jobs:
   build:
     strategy:
       matrix:
-        - runner: ubuntu-22.04-firezone
-          platform: linux/amd64
-        - runner: macos-13-xlarge
-          platform: linux/arm64
+        include:
+          - runner: ubuntu-22.04-firezone
+            platform: linux/amd64
+          - runner: macos-13-xlarge
+            platform: linux/arm64
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v3
