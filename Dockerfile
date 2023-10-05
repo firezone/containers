@@ -1,43 +1,86 @@
-ARG OS_VERSION
+ARG ALPINE_VERSION
 
-FROM alpine:${OS_VERSION} AS build
+FROM alpine:${ALPINE_VERSION} AS build_erlang
 
-ARG ERLANG
+# Important!  Update this no-op ENV variable when this Dockerfile
+# is updated with the current date. It will force refresh of all
+# of the base images and things like `apk add` won't be using
+# old cached versions when the Dockerfile is built.
+ENV REFRESHED_AT=2023-10-05 \
+  LANG=C.UTF-8 \
+  HOME=/app/ \
+  TERM=xterm
 
-RUN apk --no-cache upgrade
-RUN apk add --no-cache \
+# Add tagged repos as well as the edge repo so that we can selectively install edge packages
+ARG ALPINE_VERSION
+RUN set -xe \
+  && ALPINE_MINOR_VERSION=$(echo ${ALPINE_VERSION} | cut -d'.' -f1,2) \
+  && echo "@main http://dl-cdn.alpinelinux.org/alpine/v${ALPINE_MINOR_VERSION}/main" >> /etc/apk/repositories \
+  && echo "@community http://dl-cdn.alpinelinux.org/alpine/v${ALPINE_MINOR_VERSION}/community" >> /etc/apk/repositories \
+  && echo "@edge http://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories
+
+# Upgrade Alpine and base packages
+RUN set -xe \
+  && apk --no-cache --update-cache --available upgrade
+
+# Install bash and Erlang/OTP deps
+RUN set -xe \
+  && apk add --no-cache --update-cache --virtual .fetch-deps \
+  bash \
+  curl \
+  ca-certificates \
+  libgcc \
+  lksctp-tools \
+  pcre \
+  zlib-dev
+
+# Install Erlang/OTP build deps
+RUN set -xe \
+  && apk add --no-cache --virtual .build-deps \
   dpkg-dev \
   dpkg \
-  bash \
-  pcre \
-  ca-certificates \
-  $(if [ "${ERLANG:0:1}" = "1" ]; then echo "libressl-dev"; else echo "openssl-dev"; fi) \
-  ncurses-dev \
-  unixodbc-dev \
-  zlib-dev \
-  lksctp-tools-dev \
+  gcc \
+  g++ \
+  libc-dev \
+  linux-headers \
+  make \
   autoconf \
-  build-base \
-  perl-dev \
-  wget \
-  tar \
-  binutils
+  ncurses-dev \
+  openssl-dev \
+  unixodbc-dev \
+  lksctp-tools-dev \
+  tar
 
-RUN mkdir -p /OTP/subdir
-RUN wget -nv "https://github.com/erlang/otp/archive/OTP-${ERLANG}.tar.gz" && tar -zxf "OTP-${ERLANG}.tar.gz" -C /OTP/subdir --strip-components=1
-WORKDIR /OTP/subdir
-RUN ./otp_build autoconf
+# Download OTP
+ARG ERLANG_VERSION
+ARG ERLANG_DOWNLOAD_SHA256
+WORKDIR /tmp/erlang-build
+RUN set -xe \
+  && curl -fSL -o otp-src.tar.gz "https://github.com/erlang/otp/releases/download/OTP-${ERLANG_VERSION}/otp_src_${ERLANG_VERSION}.tar.gz" \
+  && tar -xzf otp-src.tar.gz -C /tmp/erlang-build --strip-components=1 \
+  # && sha256sum otp-src.tar.gz && exit 1 \
+  && echo "${ERLANG_DOWNLOAD_SHA256}  otp-src.tar.gz" | sha256sum -c -
 
-ARG TARGETARCH
-
-RUN ./configure \
-  --build="$(dpkg-architecture --query DEB_HOST_GNU_TYPE)" \
+# Configure & Build
+ARG ARCH
+RUN set -xe \
+  && export ERL_TOP=/tmp/erlang-build \
+  && export CPPFLAGS="-D_BSD_SOURCE $CPPFLAGS" \
+  && export gnuBuildArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
+  && export gnuArch="$(dpkg-architecture --query DEB_HOST_GNU_TYPE)" \
+  && ./configure \
+  --build="$gnuBuildArch" \
+  --host="$gnuArch" \
+  --prefix=/usr/local \
+  --sysconfdir=/etc \
+  --mandir=/usr/share/man \
+  --infodir=/usr/share/info \
   --without-javac \
+  --without-jinterface \
   --without-wx \
   --without-debugger \
   --without-observer \
-  --without-jinterface \
-  --without-cosEvent\
+  --without-cosEvent \
   --without-cosEventDomain \
   --without-cosFileTransfer \
   --without-cosNotification \
@@ -50,67 +93,158 @@ RUN ./configure \
   --without-megaco \
   --without-orber \
   --without-percept \
+  --without-odbc \
   --without-typer \
-  --with-ssl \
   --enable-threads \
-  --enable-dirty-schedulers \
-  --disable-hipe
+  --enable-shared-zlib \
+  --enable-dynamic-ssl-lib \
+  --enable-ssl=dynamic-ssl-lib \
+  && $( \
+  if [[ "${ARCH}" == *"amd64"* ]]; \
+  then export CFLAGS="-g -O2 -fstack-clash-protection -fcf-protection=full"; \
+  else export CFLAGS="-g -O2 -fstack-clash-protection"; fi \
+  ) \
+  && make -j$(getconf _NPROCESSORS_ONLN)
 
-RUN $(if [[ "${TARGETARCH}" == *"amd64"* ]]; then export CFLAGS="-g -O2 -fstack-clash-protection -fcf-protection=full"; \
-    else export CFLAGS="-g -O2 -fstack-clash-protection"; fi) \
-    && make -j$(getconf _NPROCESSORS_ONLN)
-RUN make install
+# Install to temporary location, stip the install, install runtime deps and copy to the final location
+RUN set -xe \
+  && make DESTDIR=/tmp install \
+  && cd /tmp && rm -rf /tmp/erlang-build \
+  && find /tmp/usr/local -regex '/tmp/usr/local/lib/erlang/\(lib/\|erts-\).*/\(man\|doc\|obj\|c_src\|emacs\|info\|examples\)' | xargs rm -rf \
+  && find /tmp/usr/local -name src | xargs -r find | grep -v '\.hrl$' | xargs rm -v || true \
+  && find /tmp/usr/local -name src | xargs -r find | xargs rmdir -vp || true \
+  # Strip install to reduce size
+  && scanelf --nobanner -E ET_EXEC -BF '%F' --recursive /tmp/usr/local | xargs -r strip --strip-all \
+  && scanelf --nobanner -E ET_DYN -BF '%F' --recursive /tmp/usr/local | xargs -r strip --strip-unneeded \
+  && runDeps="$( \
+  scanelf --needed --nobanner --format '%n#p' --recursive /tmp/usr/local \
+  | tr ',' '\n' \
+  | sort -u \
+  | awk 'system("[ -e /tmp/usr/local/lib/" $1 " ]") == 0 { next } { print "so:" $1 }' \
+  )" \
+  && ln -s /tmp/usr/local/lib/erlang /usr/local/lib/erlang \
+  && /tmp/usr/local/bin/erl -eval "beam_lib:strip_release('/tmp/usr/local/lib/erlang/lib')" -s init stop > /dev/null \
+  && (/usr/bin/strip /tmp/usr/local/lib/erlang/erts-*/bin/* || true) \
+  && apk add --no-cache --virtual .erlang-runtime-deps $runDeps lksctp-tools ca-certificates
 
-# No need to make docs
-# RUN if [ "${ERLANG:0:2}" -ge "23" ]; then make docs DOC_TARGETS=chunks; else true; fi
-# RUN if [ "${ERLANG:0:2}" -ge "23" ]; then make install-docs DOC_TARGETS=chunks; else true; fi
+# Cleanup after Erlang install
+RUN set -xe \
+  && apk del .fetch-deps .build-deps \
+  && cd /tmp \
+  && rm -rf /tmp/erlang-build \
+  && rm -rf /var/cache/apk/*
 
-# Remove unneeded artifacts
-RUN find /usr/local -regex '/usr/local/lib/erlang/\(lib/\|erts-\).*/\(man\|obj\|c_src\|emacs\|info\|examples\)' | xargs rm -rf
-RUN find /usr/local -name src | xargs -r find | grep -v '\.hrl$' | xargs rm -v || true
-RUN find /usr/local -name src | xargs -r find | xargs rmdir -vp || true
-RUN scanelf --nobanner -E ET_EXEC -BF '%F' --recursive /usr/local | xargs -r strip --strip-all
-RUN scanelf --nobanner -E ET_DYN -BF '%F' --recursive /usr/local | xargs -r strip --strip-unneeded
+WORKDIR ${HOME}
 
-RUN apk add --update --no-cache \
+CMD ["erl"]
+
+FROM alpine:${ALPINE_VERSION} AS build_elixir
+
+ENV LANG=C.UTF-8 \
+  HOME=/app/ \
+  TERM=xterm
+
+# Add tagged repos as well as the edge repo so that we can selectively install edge packages
+ARG ALPINE_VERSION
+RUN set -xe \
+  && ALPINE_MINOR_VERSION=$(echo ${ALPINE_VERSION} | cut -d'.' -f1,2) \
+  && echo "@main http://dl-cdn.alpinelinux.org/alpine/v${ALPINE_MINOR_VERSION}/main" >> /etc/apk/repositories \
+  && echo "@community http://dl-cdn.alpinelinux.org/alpine/v${ALPINE_MINOR_VERSION}/community" >> /etc/apk/repositories \
+  && echo "@edge http://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories
+
+# Erlang run deps
+RUN set -xe \
+  # Upgrade Alpine and base packages
+  && apk --no-cache --update-cache --available upgrade \
+  # Install bash, Erlang/OTP and Elixir deps
+  && apk add --no-cache --update-cache \
   libstdc++ \
+  ca-certificates \
   ncurses \
-  $(if [ "${ERLANG:0:1}" = "1" ]; then echo "libressl"; else echo "openssl"; fi) \
+  openssl \
+  pcre \
   unixodbc \
-  lksctp-tools \
-  wget \
-  unzip \
-  make
+  zlib \
+  # Update ca certificates
+  && update-ca-certificates --fresh
 
-ARG ELIXIR
-ARG ERLANG_MAJOR
+# Install Elixir build deps
+RUN set -xe \
+  && apk add --no-cache --virtual .build-deps \
+  make \
+  bash \
+  curl \
+  tar \
+  ca-certificates
 
-RUN wget -q -O elixir.zip "https://repo.hex.pm/builds/elixir/v${ELIXIR}-otp-${ERLANG_MAJOR}.zip" && unzip -d /ELIXIR elixir.zip
-WORKDIR /ELIXIR
-RUN make -o compile DESTDIR=/ELIXIR_LOCAL install
+# Download Elixir
+ARG ELIXIR_VERSION
+ARG ELIXIR_DOWNLOAD_SHA256
+WORKDIR /tmp/elixir-build
+RUN set -xe \
+  && curl -fSL -o elixir-src.tar.gz "https://github.com/elixir-lang/elixir/archive/v${ELIXIR_VERSION}.tar.gz" \
+  && mkdir -p /tmp/usr/local/src/elixir \
+  && tar -xzC /tmp/usr/local/src/elixir --strip-components=1 -f elixir-src.tar.gz \
+  # && sha256sum elixir-src.tar.gz && exit 1 \
+  && echo "${ELIXIR_DOWNLOAD_SHA256}  elixir-src.tar.gz" | sha256sum -c - \
+  && rm elixir-src.tar.gz
 
-FROM alpine:${OS_VERSION} AS final
+COPY --from=build_erlang /tmp/usr/local /usr/local
 
-ARG ERLANG
+# Compile Elixir
+RUN set -xe \
+  && cd /tmp/usr/local/src/elixir \
+  && make DESTDIR=/tmp install clean \
+  && find /tmp/usr/local/src/elixir/ -type f -not -regex "/tmp/usr/local/src/elixir/lib/[^\/]*/lib.*" -exec rm -rf {} + \
+  && find /tmp/usr/local/src/elixir/ -type d -depth -empty -delete \
+  && rm -rf /tmp/elixir-build \
+  && apk del .build-deps
 
-RUN apk add --update --no-cache \
+# Cleanup apk cache
+RUN rm -rf /var/cache/apk/*
+
+WORKDIR ${HOME}
+
+CMD ["iex"]
+
+FROM alpine:${ALPINE_VERSION} as release
+
+ENV LANG=C.UTF-8 \
+  HOME=/app/ \
+  TERM=xterm
+
+ARG ALPINE_VERSION
+RUN set -xe \
+  && ALPINE_MINOR_VERSION=$(echo ${ALPINE_VERSION} | cut -d'.' -f1,2) \
+  && echo "@main http://dl-cdn.alpinelinux.org/alpine/v${ALPINE_MINOR_VERSION}/main" >> /etc/apk/repositories \
+  && echo "@community http://dl-cdn.alpinelinux.org/alpine/v${ALPINE_MINOR_VERSION}/community" >> /etc/apk/repositories \
+  && echo "@edge http://dl-cdn.alpinelinux.org/alpine/edge/main" >> /etc/apk/repositories
+
+RUN set -xe \
+  # Upgrade Alpine and base packages
+  && apk --no-cache --update-cache --available upgrade \
+  # Install bash, Erlang/OTP and Elixir deps
+  && apk add --no-cache --update-cache \
+  bash \
   libstdc++ \
+  ca-certificates \
   ncurses \
-  $(if [ "${ERLANG:0:1}" = "1" ]; then echo "libressl"; else echo "openssl"; fi) \
+  openssl \
+  pcre \
   unixodbc \
-  lksctp-tools \
-  nodejs \
-  npm \
-  build-base \
-  git \
-  python3
+  zlib \
+  # Update ca certificates
+  && update-ca-certificates --fresh
 
-# Add pnpm
-RUN npm i -g pnpm
+WORKDIR ${HOME}
 
-COPY --from=build /usr/local /usr/local
-COPY --from=build /ELIXIR_LOCAL/usr/local /usr/local
+# Copy Erlang/OTP and Elixir installations
+COPY --from=build_erlang /tmp/usr/local /usr/local
+COPY --from=build_elixir /tmp/usr/local /usr/local
 
-# install hex + rebar
-RUN mix local.hex --force && \
-    mix local.rebar --force
+# Install hex + rebar
+ONBUILD RUN set -xe \
+  && mix local.hex --force \
+  && mix local.rebar --force
+
+CMD ["bash"]
