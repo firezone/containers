@@ -28,8 +28,7 @@ jobs:
       - name: Setup Docker on macOS
         if: matrix.runner == 'macos-13-xlarge'
         run: |
-          brew install docker colima
-          colima start
+          colima version
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Login to DockerHub
