@@ -43,6 +43,6 @@ jobs:
             ERLANG_MAJOR=${{ env.ERLANG_MAJOR }}
             OS_VERSION=${{ env.OS_VERSION }}
             ERLANG=${{ env.ERLANG }}
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/elixir/:${{ env.ELIXIR }}-otp-${{ env.ERLANG }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/elixir:${{ env.ELIXIR }}-otp-${{ env.ERLANG }}
           cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/elixir:${{ env.ELIXIR }}-otp-${{ env.ERLANG }}
           cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/elixir:${{ env.ELIXIR }}-otp-${{ env.ERLANG }}
