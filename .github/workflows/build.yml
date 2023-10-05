@@ -12,8 +12,6 @@ env:
   OS_VERSION: "3.18.4"
   ELIXIR: "1.15.6"
 
-  IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/elixir
-
 jobs:
   build:
     strategy:
@@ -45,6 +43,6 @@ jobs:
             ERLANG_MAJOR=${{ env.ERLANG_MAJOR }}
             OS_VERSION=${{ env.OS_VERSION }}
             ERLANG=${{ env.ERLANG }}
-          tags: ${{ env.IMAGE }}/:${{ env.ELIXIR }}-otp-${{ env.ERLANG }}
-          cache-from: type=registry,ref=${{ env.IMAGE }}:${{ env.ELIXIR }}-otp-${{ env.ERLANG }}
-          cache-to: type=registry,ref=${{ env.IMAGE }}:${{ env.ELIXIR }}-otp-${{ env.ERLANG }}
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/elixir/:${{ env.ELIXIR }}-otp-${{ env.ERLANG }}
+          cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/elixir:${{ env.ELIXIR }}-otp-${{ env.ERLANG }}
+          cache-to: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/elixir:${{ env.ELIXIR }}-otp-${{ env.ERLANG }}
