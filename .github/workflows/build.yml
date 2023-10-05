@@ -32,8 +32,7 @@ jobs:
           mkdir -p ~/.docker/cli-plugins
           ln -sfn $(which docker-buildx) ~/.docker/cli-plugins/docker-buildx
           docker buildx install
-          colima delete
-          colima start --runtime docker
+          colima start --runtime docker --vm-type=vz
           echo DOCKER_HOST="unix:///${HOME}/.colima/default/docker.sock" >> $GITHUB_ENV
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
