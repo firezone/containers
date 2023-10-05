@@ -25,6 +25,15 @@ jobs:
             platform: linux/arm64
     runs-on: ${{ matrix.runner }}
     steps:
+      - name: Setup Docker on macOS
+        if: matrix.runner == 'macos-13-xlarge'
+        run: |
+          brew install colima docker docker-buildx
+          mkdir -p ~/.docker/cli-plugins
+          ln -sfn $(which docker-buildx) ~/.docker/cli-plugins/docker-buildx
+          docker buildx install
+          colima start --runtime docker
+          echo DOCKER_HOST="unix:///${HOME}/.colima/default/docker.sock" >> $GITHUB_ENV
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Login to DockerHub
