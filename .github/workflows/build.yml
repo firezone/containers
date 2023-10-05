@@ -26,6 +26,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Setup Docker on macOS
+        env:
+          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
         if: matrix.runner == 'macos-13-xlarge'
         run: |
           curl -OSL https://raw.githubusercontent.com/Homebrew/homebrew-core/dc0669eca9479e9eeb495397ba3a7480aaa45c2e/Formula/qemu.rb
