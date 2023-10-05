@@ -28,6 +28,8 @@ jobs:
       - name: Setup Docker on macOS
         if: matrix.runner == 'macos-13-xlarge'
         run: |
+          curl -OSL https://raw.githubusercontent.com/Homebrew/homebrew-core/dc0669eca9479e9eeb495397ba3a7480aaa45c2e/Formula/qemu.rb
+          brew install ./qemu.rb
           brew install colima docker docker-buildx
           mkdir -p ~/.docker/cli-plugins
           ln -sfn $(which docker-buildx) ~/.docker/cli-plugins/docker-buildx
