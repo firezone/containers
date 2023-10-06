@@ -52,3 +52,7 @@ jobs:
             ELIXIR_VERSION=${{ env.ELIXIR_VERSION }}
             ELIXIR_DOWNLOAD_SHA256=${{ env.ELIXIR_DOWNLOAD_SHA256 }}
           tags: firezone/elixir:${{ env.ELIXIR_VERSION }}-otp-${{ env.ERLANG_VERSION }}
+          cache-from: |
+            type=registry,ref=firezone/elixir:${{ env.ELIXIR_VERSION }}-otp-${{ env.ERLANG_VERSION }}
+            type=registry,ref=firezone/cache/elixir-${{ env.ELIXIR_VERSION }}-otp-${{ env.ERLANG_VERSION }}
+          cache-to: type=registry,ref=firezone/cache/elixir-${{ env.ELIXIR_VERSION }}-otp-${{ env.ERLANG_VERSION }}

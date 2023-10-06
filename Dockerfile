@@ -66,11 +66,9 @@ ARG ARCH
 RUN set -xe \
   && export ERL_TOP=/tmp/erlang-build \
   && export CPPFLAGS="-D_BSD_SOURCE $CPPFLAGS" \
-  && export gnuBuildArch="$(dpkg-architecture --query DEB_BUILD_GNU_TYPE)" \
   && export gnuArch="$(dpkg-architecture --query DEB_HOST_GNU_TYPE)" \
   && ./configure \
-  --build="$gnuBuildArch" \
-  --host="$gnuArch" \
+  --build="$gnuArch" \
   --prefix=/usr/local \
   --sysconfdir=/etc \
   --mandir=/usr/share/man \
@@ -130,8 +128,6 @@ RUN set -xe \
 # Cleanup after Erlang install
 RUN set -xe \
   && apk del .fetch-deps .build-deps \
-  && cd /tmp \
-  && rm -rf /tmp/erlang-build \
   && rm -rf /var/cache/apk/*
 
 WORKDIR ${HOME}
@@ -140,7 +136,8 @@ CMD ["erl"]
 
 FROM alpine:${ALPINE_VERSION} AS build_elixir
 
-ENV LANG=C.UTF-8 \
+ENV REFRESHED_AT=2023-10-05 \
+  LANG=C.UTF-8 \
   HOME=/app/ \
   TERM=xterm
 
@@ -182,7 +179,7 @@ ARG ELIXIR_VERSION
 ARG ELIXIR_DOWNLOAD_SHA256
 WORKDIR /tmp/elixir-build
 RUN set -xe \
-  && curl -fSL -o elixir-src.tar.gz "https://github.com/elixir-lang/elixir/archive/v${ELIXIR_VERSION}.tar.gz" \
+  && curl -fSL -o elixir-src.tar.gz "https://github.com/elixir-lang/elixir/archive/refs/tags/v${ELIXIR_VERSION}.tar.gz" \
   && mkdir -p /tmp/usr/local/src/elixir \
   && tar -xzC /tmp/usr/local/src/elixir --strip-components=1 -f elixir-src.tar.gz \
   # && sha256sum elixir-src.tar.gz && exit 1 \
@@ -209,7 +206,8 @@ CMD ["iex"]
 
 FROM alpine:${ALPINE_VERSION} as release
 
-ENV LANG=C.UTF-8 \
+ENV REFRESHED_AT=2023-10-05 \
+  LANG=C.UTF-8 \
   HOME=/app/ \
   TERM=xterm
 
