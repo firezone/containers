@@ -54,7 +54,7 @@ jobs:
       - name: Build Docker images
         uses: docker/build-push-action@v5
         with:
-          push: ${{ github.ref == 'refs/heads/main' }}
+          push: true # ${{ github.ref == 'refs/heads/main' }}
           platforms: ${{ matrix.platforms }}
           file: Dockerfile
           build-args: |
@@ -68,4 +68,4 @@ jobs:
           cache-to: |
             type=registry,ref=us-central1-docker.pkg.dev/firezone-containers/cache/elixir:${{ env.ELIXIR_VERSION }}-otp-${{ env.ERLANG_VERSION }}
           tags: |
-            us-central1-docker.pkg.dev/firezone-containers/elixir:${{ env.ELIXIR_VERSION }}-otp-${{ env.ERLANG_VERSION }}-c${{ github.sha }}
+            us-central1-docker.pkg.dev/firezone-containers/elixir/${{ env.ELIXIR_VERSION }}-otp-${{ env.ERLANG_VERSION }}:${{ github.sha }}
