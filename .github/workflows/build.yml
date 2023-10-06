@@ -19,7 +19,7 @@ jobs:
       matrix:
         include:
           - runner: ubuntu-22.04-firezone
-            platforms: linux/amd64,linux/arm64
+            platforms: linux/amd64
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Set up QEMU
