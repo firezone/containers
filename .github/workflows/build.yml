@@ -3,8 +3,6 @@ name: Build and publish Elixir image
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
 
 env:
   ALPINE_VERSION: "3.18.4"
@@ -18,8 +16,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - runner: ubuntu-22.04-firezone
-            platforms: linux/amd64
+          - runner: ubuntu-22.04-firezone-16c
+            platforms: linux/amd64,linux/arm64
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Set up QEMU
@@ -32,23 +33,39 @@ jobs:
           # We should for any updates on buildx and on the setup-buildx-action itself.
           driver-opts: |
             image=moby/buildkit:v0.12.0
-      - name: Login to DockerHub
-        uses: docker/login-action@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@v4
+      - id: auth
+        uses: google-github-actions/auth@v1
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - uses: actions/checkout@v3
-      - name: Build and push
-        uses: docker/build-push-action@v3
-        id: build
+          token_format: access_token
+          workload_identity_provider: "projects/397012414171/locations/global/workloadIdentityPools/github-actions-pool/providers/github-actions"
+          service_account: "github-actions@github-iam-387915.iam.gserviceaccount.com"
+          export_environment_variables: false
+      - name: Change current gcloud account
+        run: gcloud --quiet config set project firezone-containers
+      - name: Login to Google Artifact Registry
+        uses: docker/login-action@v3
         with:
-          push: true
-          file: Dockerfile
+          registry: "us-central1-docker.pkg.dev"
+          username: oauth2accesstoken
+          password: ${{ steps.auth.outputs.access_token }}
+      - name: Build Docker images
+        uses: docker/build-push-action@v5
+        with:
+          push: ${{ github.ref == 'refs/heads/main' }}
           platforms: ${{ matrix.platforms }}
+          file: Dockerfile
           build-args: |
             ALPINE_VERSION=${{ env.ALPINE_VERSION }}
             ERLANG_VERSION=${{ env.ERLANG_VERSION }}
             ERLANG_DOWNLOAD_SHA256=${{ env.ERLANG_DOWNLOAD_SHA256 }}
             ELIXIR_VERSION=${{ env.ELIXIR_VERSION }}
             ELIXIR_DOWNLOAD_SHA256=${{ env.ELIXIR_DOWNLOAD_SHA256 }}
-          tags: firezone/elixir:${{ env.ELIXIR_VERSION }}-otp-${{ env.ERLANG_VERSION }}
+          cache-from: |
+            type=registry,ref=us-central1-docker.pkg.dev/firezone-containers/cache/elixir:${{ env.ELIXIR_VERSION }}-otp-${{ env.ERLANG_VERSION }}
+          cache-to: |
+            type=registry,ref=us-central1-docker.pkg.dev/firezone-containers/cache/elixir:${{ env.ELIXIR_VERSION }}-otp-${{ env.ERLANG_VERSION }}
+          tags: |
+            us-central1-docker.pkg.dev/firezone-containers/elixir:${{ env.ELIXIR_VERSION }}-otp-${{ env.ERLANG_VERSION }}-c${{ github.sha }}

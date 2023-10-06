@@ -97,8 +97,9 @@ RUN set -xe \
   --enable-shared-zlib \
   --enable-dynamic-ssl-lib \
   --enable-ssl=dynamic-ssl-lib \
+  $(if [[ "${TARGETARCH}" != *"amd64"* ]]; then echo "--disable-jit"; fi) \
   && $( \
-  if [[ "${ARCH}" == *"amd64"* ]]; \
+  if [[ "${TARGETARCH}" == *"amd64"* ]]; \
   then export CFLAGS="-g -O2 -fstack-clash-protection -fcf-protection=full"; \
   else export CFLAGS="-g -O2 -fstack-clash-protection"; fi \
   ) \
