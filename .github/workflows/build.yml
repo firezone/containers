@@ -18,6 +18,9 @@ jobs:
         include:
           - runner: ubuntu-22.04-firezone
             platforms: linux/amd64,linux/arm64
+    permissions:
+      contents: read
+      id-token: write
     runs-on: ${{ matrix.runner }}
     steps:
       - name: Set up QEMU
