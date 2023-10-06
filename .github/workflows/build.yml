@@ -32,16 +32,18 @@ jobs:
           # We should for any updates on buildx and on the setup-buildx-action itself.
           driver-opts: |
             image=moby/buildkit:v0.12.0
-      - name: Login to DockerHub
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v3
       - name: Build and push
         uses: docker/build-push-action@v3
         id: build
         with:
+          # Always build fresh base images
+          no-cache: true
           push: true
           file: Dockerfile
           platforms: ${{ matrix.platforms }}
@@ -51,4 +53,4 @@ jobs:
             ERLANG_DOWNLOAD_SHA256=${{ env.ERLANG_DOWNLOAD_SHA256 }}
             ELIXIR_VERSION=${{ env.ELIXIR_VERSION }}
             ELIXIR_DOWNLOAD_SHA256=${{ env.ELIXIR_DOWNLOAD_SHA256 }}
-          tags: firezone/elixir:${{ env.ELIXIR_VERSION }}-otp-${{ env.ERLANG_VERSION }}
+          tags: ghcr.io/firezone/elixir:${{ env.ELIXIR_VERSION }}-otp-${{ env.ERLANG_VERSION }}

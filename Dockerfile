@@ -2,12 +2,7 @@ ARG ALPINE_VERSION
 
 FROM alpine:${ALPINE_VERSION} AS build_erlang
 
-# Important!  Update this no-op ENV variable when this Dockerfile
-# is updated with the current date. It will force refresh of all
-# of the base images and things like `apk add` won't be using
-# old cached versions when the Dockerfile is built.
-ENV REFRESHED_AT=2023-10-05 \
-  LANG=C.UTF-8 \
+ENV LANG=C.UTF-8 \
   HOME=/app/ \
   TERM=xterm
 
@@ -207,8 +202,7 @@ CMD ["iex"]
 
 FROM alpine:${ALPINE_VERSION} as release
 
-ENV REFRESHED_AT=2023-10-05 \
-  LANG=C.UTF-8 \
+ENV LANG=C.UTF-8 \
   HOME=/app/ \
   TERM=xterm
 
@@ -231,6 +225,8 @@ RUN set -xe \
   openssl \
   pcre \
   unixodbc \
+  # Git is required for fetching some Mix deps
+  git \
   zlib \
   # Update ca certificates
   && update-ca-certificates --fresh
