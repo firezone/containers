@@ -172,19 +172,25 @@ RUN set -xe \
   bash \
   curl \
   tar \
+  git \
   ca-certificates
 
 # Download Elixir
 ARG ELIXIR_VERSION
-ARG ELIXIR_DOWNLOAD_SHA256
-WORKDIR /tmp/elixir-build
+# ARG ELIXIR_DOWNLOAD_SHA256
+# WORKDIR /tmp/elixir-build
+# RUN set -xe \
+#   && curl -fSL -o elixir-src.tar.gz "https://github.com/elixir-lang/elixir/archive/refs/tags/v${ELIXIR_VERSION}.tar.gz" \
+#   && mkdir -p /tmp/usr/local/src/elixir \
+#   && tar -xzC /tmp/usr/local/src/elixir --strip-components=1 -f elixir-src.tar.gz \
+#   # && sha256sum elixir-src.tar.gz && exit 1 \
+#   && echo "${ELIXIR_DOWNLOAD_SHA256}  elixir-src.tar.gz" | sha256sum -c - \
+#   && rm elixir-src.tar.gz
 RUN set -xe \
-  && curl -fSL -o elixir-src.tar.gz "https://github.com/elixir-lang/elixir/archive/refs/tags/v${ELIXIR_VERSION}.tar.gz" \
   && mkdir -p /tmp/usr/local/src/elixir \
-  && tar -xzC /tmp/usr/local/src/elixir --strip-components=1 -f elixir-src.tar.gz \
-  # && sha256sum elixir-src.tar.gz && exit 1 \
-  && echo "${ELIXIR_DOWNLOAD_SHA256}  elixir-src.tar.gz" | sha256sum -c - \
-  && rm elixir-src.tar.gz
+  && cd /tmp/usr/local/src/ \
+  && git clone https://github.com/elixir-lang/elixir --depth 1 --branch "v${ELIXIR_VERSION}" \
+  && cd elixir
 
 COPY --from=build_erlang /tmp/usr/local /usr/local
 
