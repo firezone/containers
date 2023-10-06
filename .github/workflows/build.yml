@@ -18,7 +18,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - runner: ubuntu-22.04-firezone
+          - runner: ubuntu-22.04-firezone-16c
             platforms: linux/amd64
     runs-on: ${{ matrix.runner }}
     steps:
